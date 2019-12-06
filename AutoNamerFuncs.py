@@ -39,11 +39,11 @@ def scrape_web(string):
         
 def type_names(type_):
     if type_ == '(miniseries)':
-        return type_, True, False, False
+        return 'Miniserier/', True, False, False
     elif type_ == '(TV_series)':
-        return 'Miniseries', False, True, False
+        return 'TV_Serie/', False, True, False
     elif type_ == 'episodes':
-        return 'Serier', False, False, True
+        return 'Serier/', False, False, True
 
 def get_names(name_list, season, manual_exceptions, corrections, no_good):
     string = 'https://en.wikipedia.org/wiki/'

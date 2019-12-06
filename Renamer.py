@@ -4,7 +4,7 @@ Jacobs Autonamer
 """
 import os
 import shutil
-from AutoNamerFuncs import fix_case, get_names
+from AutoNamerFuncs import fix_case, get_names, log_movie
 #%% Setup
 
 #Exceptions
@@ -39,6 +39,7 @@ if len(folders) != 0:
         total_path = path + '/' + folder
         files = os.listdir(path+'/'+folder)
         folder_name = folder.split('.')
+        movie = None
         for i in range(len(folder_name)):
             if folder_name[i][0].lower() == 's' and folder_name[i][1:3].isdigit():
                 int(folder_name[i][1:3])
@@ -48,15 +49,22 @@ if len(folders) != 0:
                 season = folder_name[i][1:3]
                 movie = False
                 break
-            elif folder_name[i].isdigit():
-                name_list = folder_name[0:i]
-                name_list = [word.capitalize() for word in name_list]
-                name_list = fix_case(name_list, dont_uppercase)
-                movie = True
-                break
+        if movie is None:
+            for i in range(len(folder_name)):
+                if folder_name[i:i+4].isdigit():
+                    name_list = folder_name[0:i]
+                    name_list = [word.capitalize() for word in name_list]
+                    name_list = fix_case(name_list, dont_uppercase)
+                    movie = True
+                    break        
+
+        if movie is None:
+            os.rename(total_path, check_path + folder)
+            pass
+
         if not movie:
            name = ' '.join(name_list)
-           names, type_ = get_names(name_list, season)
+           names, type_ = get_names(name_list, season, manual_exceptions, corrections, no_good)
            network_folder_name = name + '/'
            season = 'Season '+ season + '/'
            for file in files:
@@ -70,44 +78,48 @@ if len(folders) != 0:
                                episode = word[4:]
                                keep = True
                                break
-
-
-
-#You are here
-               if keep:
-                   if not os.path.isdir(done_path+network_folder):
-                       os.mkdir(done_path+network_folder)
-                   if not miniseries:
-                       if not os.path.isdir(done_path+network_folder+season):
-                           os.mkdir(done_path+network_folder+season)
-                       if type(names[int(episode)-1]) is not list:
-                           os.rename(total_path+'/'+file, done_path + network_folder + season + episode + ' - ' + names[int(episode)-1]+'.'+extension)
-                       else:
-                           episode = int(episode)
-                           episode_ = str(episode) + '+' + str(episode+1)
-                           os.rename(total_path+'/'+file, done_path + network_folder + season + episode_ + ' - ' + names[int(episode)-1][1]+'.'+extension)
-                   else:
-                       if len(names[int(episode)-1]) == 1:
-                           os.rename(total_path+'/'+file, done_path + network_folder + episode + ' - ' + names[int(episode)-1]+'.'+extension)
-                       else:
-                           episode = int(episode)
-                           episode = str(episode) + '+' + str(episode+1)
-                           os.rename(total_path+'/'+file, done_path + network_folder + episode + ' - ' + names[int(episode)-1]+'.'+extension)
+               if extension == 'mkv' and keep == False:
+                   keep = True
+                   episode = None
+               if keep and episode == None:
+                   os.rename(total_path+'/'+file, check_path+network_folder_name)
+               elif keep and episode != None:
+                       if type_ != 'Miniserier/':
+                           if type_ == 'TV_Serie/':
+                               type_ = 'Miniserier/'
+                           if not os.path.isdir(move_path + type_ + network_folder_name):
+                               os.mkdir(move_path + type_ + network_folder_name)
+                           if not os.path.isdir(move_path + type_ + network_folder_name + season):
+                               os.mkdir(move_path + type_ + network_folder_name + season)
+                           if type(names[int(episode)-1]) is not list:
+                               os.rename(total_path+'/'+file, move_path + type_ + network_folder_name
+                                         + season + episode + ' - ' + names[int(episode)-1]
+                                         + '.' + extension)
+                           else:
+                               episode_ = episode + '+' + str(int(episode)+1)
+                               os.rename(total_path+'/'+file, move_path + type_ + network_folder_name
+                                         + season + episode_ + ' - ' + names[int(episode)-1][1]
+                                         + '.' + extension )
+                       elif type_ == 'Miniserier/':
+                           if not os.path.isdir(move_path + type_ + network_folder_name):
+                               os.mkdir(move_path + type_ + network_folder_name)
+                           if type(names[int(episode)-1]) is not list:
+                               os.rename(total_path+'/'+file, move_path + type_ + network_folder_name
+                                         + episode + ' - ' + names[int(episode)-1] + '.' + extension)
+                           else:
+                               episode_ = episode + str(int(episode)+1)
+                               os.rename(total_path+'/'+file, move_path + type_ + network_folder_name
+                                         + episode_ + ' - ' + names[int(episode)-1][1] + '.' + extension)
                else:
                    try:
                        os.remove(total_path+'/'+file)
                    except:
                        shutil.rmtree(total_path+'/'+file)
-        elif is_series == False:
-            continue
-            #name = ' '.join(name_list)
-            #destination = move_path + 'Film/'
-            #log_movie(name)
-           
-        else:
-            shutil.move(path+'/'+folder, move_path)
-        
+                   
+        elif movie:
+            name = ' '.join(name_list)
+            destination = move_path + 'Film/'
+            log_movie(name, log_path)
+
         if len(os.listdir(total_path)) == 0:
             os.rmdir(total_path)
-
-
